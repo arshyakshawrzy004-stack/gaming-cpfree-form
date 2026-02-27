@@ -1,41 +1,36 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method not allowed');
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
 
-  const { name, email, website } = req.body || {};
-  if (website) return res.status(200).send('ok'); // anti-spam honeypot
+  const { name, email } = req.body;
 
-  if (!name || !email) return res.status(400).send('Missing fields');
+  const BOT_TOKEN = "8719633460:AAEKuvB957QtV6U2t8K7WxXyQoiaq86dTpw";
+  const CHAT_ID_YOU = "7652970667";
+  const CHAT_ID_GROUP = "-1003835244147";
 
-  const safeName = String(name).trim().slice(0, 80);
-  const safeEmail = String(email).trim().slice(0, 120);
+  const text = `
+📥 New Submission
 
-  const BOT_TOKEN = process.env.BOT_TOKEN;
-  const CHAT_ID_YOU = process.env.CHAT_ID_YOU;
-  const CHAT_ID_GROUP = process.env.CHAT_ID_GROUP;
+👤 Name: ${name}
+📧 Email: ${email}
+`;
 
-  if (!BOT_TOKEN || !CHAT_ID_YOU) return res.status(500).send('Server not configured');
-
-  const text =
-`New submission ✅
-Name: ${safeName}
-Email: ${safeEmail}`;
-
-  async function send(chatId) {
-    if (!chatId) return;
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text })
+  const sendMessage = async (chatId) => {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+      }),
     });
-    if (!r.ok) throw new Error(await r.text());
-  }
+  };
 
-  try {
-    await send(CHAT_ID_YOU);
-    await send(CHAT_ID_GROUP);
-    return res.status(200).send('ok');
-  } catch {
-    return res.status(500).send('Telegram error');
-  }
+  await sendMessage(CHAT_ID_YOU);
+  await sendMessage(CHAT_ID_GROUP);
+
+  return res.status(200).json({ message: "Sent successfully" });
 }
